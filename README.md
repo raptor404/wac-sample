@@ -41,3 +41,8 @@ visit the frontend http://localhost:3000
 visit the backend http://localhost:8888
 
 
+### Connecting to your database from localhost
+`docker exec -it laravel-mysql-1 bash -c "mysql -uroot -ppassword"`
+
+Or use any database GUI and connect to 127.0.0.1 port 3333
+
