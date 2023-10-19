@@ -46,3 +46,9 @@ visit the backend http://localhost:8888
 
 Or use any database GUI and connect to 127.0.0.1 port 3333
 
+
+### Other tips
+`./vendor/bin/sail down` to bring down the stack
+
+Sometimes it's necessary to restart the nuxt app when adding new routes. Simply `ctrl+c` on the npm command execute
+`./vendor/bin/sail npm run dev --prefix frontend` again
