@@ -1,5 +1,21 @@
 ## Getting started
 
+## NB Submission
+Process notes in notes.txt
+
+Start sail as usual, run migrations and seeder as usual
+```bash
+./vendor/bin/sail artisan migrate:fresh --seed
+```
+
+### Run frontend as usual
+`./vendor/bin/sail npm install --prefix frontend`
+`./vendor/bin/sail npm run dev --prefix frontend`
+
+
+
+
+
 ### Pre-requisites
 - docker
 - docker-compose

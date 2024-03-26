@@ -11,14 +11,13 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('users', function (Blueprint $table) {
-            $table->id();
-            $table->string('name');
-            $table->string('email')->unique();
-            $table->timestamp('email_verified_at')->nullable();
-            $table->string('password');
-            $table->rememberToken();
+        Schema::create('RecipeStep', function (Blueprint $table) {
+            $table->id('RecipeStepID');
+            $table->foreignId('RecipeID');
+            $table->integer('Order');
+            $table->text('Text');
             $table->timestamps();
+            $table->fullText('Text','IDX_FT_RecipeStepText');
         });
     }
 
@@ -27,6 +26,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('users');
+        Schema::dropIfExists('RecipeStep');
     }
 };

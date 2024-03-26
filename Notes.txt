@@ -1,0 +1,181 @@
+WAC notes:
+
+TL;DR:
+Overall a cool problem, waaaay to much boiler plate stuff that took a while to recall and reconstruct
+Spent a good amount of time figuring out a cool way to join up data with some possible pivots to storage strategy
+Frontend was nothing special, realized my Vue chops were a little rusty, so I opted for options api, no ssr, could learn it soon if I needed, was just tooo much for an afternoon of sitting
+Was cool to figure out WSL, docker and sail on windows ( have only used default boxes in simple docker-compose), hadden't set this up on a personal machine before, lucky my battlestation had plenty of resource left over
+Ran out of time for this given family and current work load on paid work. Used some amount of innovation points for this as well to sharpen back up on current trends
+
+
+Search Recipes by email, ingredients, keywords
+
+Recipe contains:
+    name-text
+    description - text
+    ingredients - unordered list
+    steps - ordered list
+    email - text
+    slug - unique column- name + id
+
+
+Logic:
+At first this seems like a great nosql + cloud search candidate. Doesn't seem like the right scale for the design though.
+Moving on to the fastest searchable / scalable relational version I could whip up in a few mins.
+Going for a medium normalization since breaking ingredient text and step text into fields requires a schema/ reasoning
+Select optimization says we probably want to be able to join these back up pretty quick
+
+Thought about db search + formatted records cached by id since we have to pull and join the lists for these records
+
+
+Ingredient search is a table scan
+Steps search is a table scan
+Author email is likely the shortest table scan
+obviously slug matching is the cheapest table scan
+
+
+With the cost of some of these lookups, I am thinking autocompletes on the author, ingredient list for small sites
+on larger sites debounce and fetch by contains 2 char substring? n char substring? don't recall how that algo is implemented, is probably just starts with
+
+text search column is available in mysql, so that is probably what we use for Ingredient.Text, RecipeSteps.Text, Recipe.Name, Recipe.Description?
+Storage engine and language are not specified, so we are going use what works here because we can.
+
+
+
+This seems like the correct normalization:
+
+Recipe:
+	RecipeID
+    AuthorID
+	Name
+	Description
+	Slug Name-RecipeID unique index
+
+Author:
+    AuthorID
+    Firstname
+    Lastname
+    EmailAddress
+
+Ingredient
+    IngredientID
+	RecipeID
+	Text
+
+RecipeSteps
+	RecipeID
+	StepOrder
+	Text
+
+
+
+Basic queries:
+
+select RecipeID
+from Recipe
+join Author on Author.AuthorID = Recipe.AuthorID
+where Author.EmailAddress='$authorSearch';
+
+select RecipeID
+from Ingredient
+where Ingredient.Text like '%$ingredientSearch%';
+
+select RecipeID
+from RecipeSteps
+where RecipeSteps.Text like '%$Keyword%';
+
+select RecipeID
+from Ingredient
+where Ingredient.Text like '%$keyword%';
+
+select RecipeID
+from Recipe
+where Name like '%$keyword%'
+or Description like '%$keyword%'
+
+We NAND the result sets by RecipeID and fetch from the cache
+Technically if a parameter is missing, you actually will get 0 results in the sense of an abstract query
+But they mean sql and where we would just omit a statement with no param added
+
+
+
+With a solid well separated design I can move on to creating a bunch of files as the stub out
+Then I write some failing tests
+Starting with my api routes, my system under test will be the http interface for the api routes I plan to use
+/api/recipe
+/api/recipe/search
+
+Then adding invalid cases to get either a general error case or a graceful fallback I want to define
+/api/recipe/search?page=10
+/api/recipe/search?flambe=test //this one doesn't do anything but I want to add a redirect if I have time for invalid parameters if I have time
+
+
+//validator tests
+/api/recipe/search?email=test //invalid email //tests the request validator
+/api/recipe/search?email=test@test.com // first passable test //this is testing the request validator
+
+/api/recipe/search? //this is testing the request validator
+/api/recipe/search?page=page //this is testing the request validator
+/api/recipe/search?page= //this is testing the request validator, checking null conversion
+//300 char string, will be the same if we test the other conditions so add to the same test
+/api/recipe/search?keyword=testttestttestttestttestttestttestttestttestttestttestttestttestttestttestttestttestttestttestttestttestttestttestttestttestttestttestttestttestttestttestttestttestttestttestttestttestttestttestttestttestttestttestttestttestttestttestttestttestttestttestttestttestttestttestttestttestttestttestttestt
+//honeypot test
+/api/recipe/search?password=teest
+
+//we are overriding the limit on the server so we don't have issues with data sizing
+/api/recipe/search?limit=10000
+
+
+Once we have a bunch of fails, we add the request validator for search
+since search has a few different cases and we could potentially need input cleaning we can add a hack here over regular request handler
+
+Adding a service makes some sense since we will need to do some large queries, we can keep some slim controllers that way
+If this was a longer living service we would probably want to split out the caching for new entries to a new file
+Still waffling on whether I want to just do the raw selects and create the records for a given page, or call get on the cache 10 times
+No one said we have to save time or space right now, so maybe just doing the raw selects and then adding caching later? I've been on a select biased kick lately...
+After looking at the sail docs it looks like redis isn't bundled into the vm that gets created, just the design diff from homestead
+Skipping the caching layer for now, looks like we get to break out map or array keying
+
+
+Next we should probably throw together the migrations
+Then some factories
+
+Then fill out the body of the service and the couple of unit tests for that
+Dont really need to test the controllers much since its all framework code
+Could add a couple json/http header business rule tests that would run against all routes, but this is a checklist kind of test
+
+Migrations and models filled out, added relations just in case.
+Starting factories before I start querying the data
+
+
+Search Plan is as follows, build out pagination the old school way since I don't remember how the default laravel one works with optimizing selects
+
+Then grab the recipeIDs by the result sets of the 3 inputs for the queries
+Once we have the result of the 3 queries, we want to get the set of results that is common to the 3 selects
+There is probably an algo or function in mysql that can do this reduction, but I don't happen to know it
+So instead I have the following simple algo:
+    filter out empty input arrays
+    order the arrays by size
+    call array_intersect on the arrays
+
+This will reduce the result set to those elements common to all arrays, starting from the smallest so as to develop the output set fastest
+
+Then query and format the actual data records
+    if we had external storage of completed records, we could skip the build out of the records in the formatter, but the way it is written is decently compact
+
+
+Once we have working search and all routes with pagination, I can move on to the frontend
+
+I am not entirely unfamiliar with the basic outline of the Nuxt stuff
+But after messing around with it for tooo long I am switching to what I know
+I got everything working basically in vue3 after a fresh session, but scrounging up the focus while doing full days at current job
+
+
+I opted to pull in vuex and vue router because I know how to use them effectively and they make some sense for the problem
+Frontend works on pages, reuses a display component for recipe data, detail page just adds the ingredient and steps list
+
+No additional formatting added and I didn't end up getting tailwind running as I just didn't have time to style it up
+
+I feel like if I had more time over the weekend I could have polished this up, but it would probably just be to import some prebuild layout from someone else
+
+
