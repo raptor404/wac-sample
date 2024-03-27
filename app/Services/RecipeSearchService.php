@@ -43,7 +43,7 @@ class RecipeSearchService
         $ingredientResult = $this->getIngredientResults($ingredient, $keyword);
         $keywordResult = $this->getKeywordResults($keyword);
 
-        $idIntersect = $this->array_intersections($authorResult, $ingredientResult, $keywordResult);
+        $idIntersect = $this->array_intersections([$author, $ingredient,$keyword],$authorResult, $ingredientResult, $keywordResult);
 
         $this->lastResultCount = count($idIntersect);
         if ($offset > $this->lastResultCount) {
@@ -61,9 +61,19 @@ class RecipeSearchService
         );
     }
 
-    public function array_intersections(array &$authorResult, array &$ingredientResult, array &$keywordResult): array
+    public function array_intersections(array $inputs, array &$authorResult, array &$ingredientResult, array &$keywordResult): array
     {
-        $filtered = array_filter([$authorResult, $ingredientResult, $keywordResult]);
+        $filtered = [];
+        //This could possibly be done with destructuring...
+        if($inputs[0]!==null){
+            $filtered[] = $authorResult;
+        }
+        if($inputs[1]!==null){
+            $filtered[] = $ingredientResult;
+        }
+        if($inputs[2]!==null){
+            $filtered[] = $keywordResult;
+        }
 
         if(count($filtered)===0){
             return [];

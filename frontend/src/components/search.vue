@@ -111,7 +111,7 @@ export default {
                 query: this.searchParamsState
             })
         },
-        async fetchData(id) {
+        async fetchData() {
             this.error = this.post = null
             this.loading = true
             let self = this;
@@ -144,6 +144,17 @@ export default {
                 this.loading = false
             }
         },
+    },
+    mounted() {
+        this.searchParamsState = {
+            author: this.$route.query.author,
+            ingredient:  this.$route.query.ingredient,
+            keyword: this.$route.query.keyword,
+            password:  this.$route.query.password,
+            page:  this.$route.query.page
+        }
+        this.fetchData()
+
     },
     created() {
         // watch the params of the route to fetch the data again

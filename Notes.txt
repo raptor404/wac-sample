@@ -178,4 +178,4 @@ No additional formatting added and I didn't end up getting tailwind running as I
 
 I feel like if I had more time over the weekend I could have polished this up, but it would probably just be to import some prebuild layout from someone else
 
-
+Fixed 2 small bugs on further review around url trigger of data fetch and around the reduction of empty input data 
